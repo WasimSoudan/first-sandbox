@@ -1,0 +1,21 @@
+{
+  "name": "first-sandbox",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "review": "tsx src/cli.ts review"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@vercel/sandbox": "^3.8.0",
+    "commander": "^15.0.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}
