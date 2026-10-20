@@ -12,8 +12,22 @@ async function time<T>(label: string, fn: () => Promise<T>): Promise<T> {
   try {
     return await fn();
   } finally {
-    const durationMs = Date.now() - startedAt;
-    console.log(`  ⏱  ${label}: ${durationMs}ms`);
+    console.log(`  ⏱  ${label}: ${Date.now() - startedAt}ms`);
+  }
+}
+
+async function safe<T>(
+  label: string,
+  fn: () => Promise<T>,
+  fallback: T
+): Promise<T> {
+  try {
+    return await fn();
+  } catch (error) {
+    console.warn(
+      `⚠  ${label} failed: ${error instanceof Error ? error.message : error}`
+    );
+    return fallback;
   }
 }
 
@@ -42,20 +56,35 @@ program
       const lifecycle = await time("sandbox lifecycle", () =>
         runSandboxLifecycle(repoUrl)
       );
+
       const aiReview =
         lifecycle.files.length === 0
           ? { overallRisk: "low" as const, findings: [] }
-          : await time("ai analysis", () => analyzeRepository(lifecycle.files));
+          : await time("ai analysis", () =>
+              safe("ai analysis", () => analyzeRepository(lifecycle.files), {
+                overallRisk: "low" as const,
+                findings: [],
+              })
+            );
 
-      const testFindings = parseTestFailures(
-        `${lifecycle.testResult.stdout}\n${lifecycle.testResult.stderr}`
+      const testFindings = safe(
+        "test parsing",
+        async () =>
+          parseTestFailures(
+            `${lifecycle.testResult.stdout}\n${lifecycle.testResult.stderr}`
+          ),
+        []
       );
+
+      const resolvedTestFindings = await testFindings;
 
       const combined = {
         overallRisk:
-          testFindings.length > 0 ? ("high" as const) : aiReview.overallRisk,
+          resolvedTestFindings.length > 0
+            ? ("high" as const)
+            : aiReview.overallRisk,
         aiFindings: aiReview.findings,
-        testFindings,
+        testFindings: resolvedTestFindings,
       };
 
       console.log(`\nOverall risk: ${combined.overallRisk}`);
