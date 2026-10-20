@@ -6,11 +6,16 @@ const INTERESTING_PATHS = [
   "repo/src/app.ts",
   "repo/lib/auth.ts",
 ];
-
+export type TestResult = {
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+};
 export type LifecycleResult = {
   sandboxName: string;
   cloneExitCode: number;
   files: Array<{ path: string; content: string }>;
+  testResult: TestResult;
 };
 
 export async function runSandboxLifecycle(
@@ -44,11 +49,25 @@ export async function runSandboxLifecycle(
         });
       }
     }
+    const install = await sandbox.runCommand({ cmd: 'pnpm', args: ['install'], cwd: 'repo' });
+    if (install.exitCode !== 0) {
+      throw new Error(`Install failed: ${await install.stderr()}`);
+    }
+    const test = await sandbox.runCommand({
+      cmd: "pnpm",
+      args: ["test"],
+      cwd: "repo",
+    });
 
     return {
       sandboxName: sandbox.name,
       cloneExitCode: clone.exitCode,
       files,
+      testResult: {
+        exitCode: test.exitCode,
+        stdout: await test.stdout(),
+        stderr: await test.stderr(),
+      },
     };
   } finally {
     await sandbox.stop();

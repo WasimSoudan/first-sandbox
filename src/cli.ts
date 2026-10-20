@@ -30,7 +30,7 @@ program
       const lifecycle = await runSandboxLifecycle(repoUrl);
       console.log(`Sandbox: ${lifecycle.sandboxName}`);
       console.log(`Collected ${lifecycle.files.length} file(s) for analysis.`);
-
+      console.log(lifecycle.testResult);
       if (lifecycle.files.length === 0) {
         console.log("No files matched the interest list; skipping analysis.");
         return;
