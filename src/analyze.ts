@@ -1,6 +1,5 @@
-import { generateText } from "ai";
+import { generateText, Output } from "ai";
 import { google } from "@ai-sdk/google";
-
 import { z } from 'zod';
  
 export const findingSchema = z.object({
@@ -27,16 +26,45 @@ export async function analyzeWithPromptV1(source: string): Promise<string> {
 
   return result.text;
 }
-async function main() {
-  const source = `
-      export function login(user: string, password: string) {
-        if (password === 'admin') return true;
-        return false;
-      }
-    `;
 
-  const review = await analyzeWithPromptV1(source);
-  console.log(review);
+export async function analyzeRepository(
+  files: Array<{ path: string; content: string }>
+): Promise<Review> {
+  const prompt = [
+    'You are a senior application security and code quality reviewer.',
+    'Return only findings that are directly supported by the provided source.',
+    'Prefer precise, actionable recommendations over generic advice.',
+    'If there are no findings, return an empty findings array.',
+    '',
+    ...files.map((f) => `FILE: ${f.path}\n${f.content}`)
+  ].join('\n');
+ 
+  const result = await generateText({
+    model: google("gemini-3.8-flash"),
+    output: Output.object({ schema: reviewSchema }),
+    prompt,
+  });
+
+  return result.output;
+}
+
+
+
+async function main() {
+  const files = [
+    {
+      path: "src/auth.ts",
+      content: `
+        export function login(user: string, password: string) {
+          if (password === 'admin') return true;
+          return false;
+        }
+      `,
+    },
+  ];
+
+  const review = await analyzeRepository(files);
+  console.log(JSON.stringify(review, null, 2));
 }
 
 main();
