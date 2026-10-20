@@ -5,7 +5,8 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "review": "tsx --env-file=.env src/cli.ts review"
+    "review": "tsx --env-file=.env src/cli.ts review",
+    "test": "node --test"
   },
   "keywords": [],
   "author": "",

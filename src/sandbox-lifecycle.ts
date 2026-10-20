@@ -1,5 +1,26 @@
 import { Sandbox } from "@vercel/sandbox";
 
+type PackageManager = "pnpm" | "npm" | "yarn";
+
+async function detectPackageManager(sandbox: Sandbox): Promise<PackageManager> {
+  if (await sandbox.readFileToBuffer({ path: "repo/pnpm-lock.yaml" })) {
+    return "pnpm";
+  }
+  if (await sandbox.readFileToBuffer({ path: "repo/yarn.lock" })) {
+    return "yarn";
+  }
+  return "npm";
+}
+
+async function commandOutput(result: {
+  stdout: () => Promise<string>;
+  stderr: () => Promise<string>;
+}): Promise<string> {
+  const stdout = (await result.stdout()).trim();
+  const stderr = (await result.stderr()).trim();
+  return [stdout, stderr].filter(Boolean).join("\n");
+}
+
 const INTERESTING_PATHS = [
   "repo/package.json",
   "repo/src/index.ts",
@@ -49,12 +70,17 @@ export async function runSandboxLifecycle(
         });
       }
     }
-    const install = await sandbox.runCommand({ cmd: 'pnpm', args: ['install'], cwd: 'repo' });
+    const packageManager = await detectPackageManager(sandbox);
+    const install = await sandbox.runCommand({
+      cmd: packageManager,
+      args: ["install"],
+      cwd: "repo",
+    });
     if (install.exitCode !== 0) {
-      throw new Error(`Install failed: ${await install.stderr()}`);
+      throw new Error(`Install failed: ${await commandOutput(install)}`);
     }
     const test = await sandbox.runCommand({
-      cmd: "pnpm",
+      cmd: packageManager,
       args: ["test"],
       cwd: "repo",
     });
