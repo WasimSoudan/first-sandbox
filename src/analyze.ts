@@ -1,20 +1,20 @@
 import { generateText, Output } from "ai";
 import { google } from "@ai-sdk/google";
-import { z } from 'zod';
- 
+import { z } from "zod";
+
 export const findingSchema = z.object({
-  severity: z.enum(['low', 'medium', 'high', 'critical']),
-  category: z.enum(['security', 'quality', 'performance', 'reliability']),
+  severity: z.enum(["low", "medium", "high", "critical"]),
+  category: z.enum(["security", "quality", "performance", "reliability"]),
   file: z.string(),
   summary: z.string(),
-  recommendation: z.string()
+  recommendation: z.string(),
 });
- 
+
 export const reviewSchema = z.object({
-  overallRisk: z.enum(['low', 'medium', 'high']),
-  findings: z.array(findingSchema)
+  overallRisk: z.enum(["low", "medium", "high"]),
+  findings: z.array(findingSchema),
 });
- 
+
 export type Finding = z.infer<typeof findingSchema>;
 export type Review = z.infer<typeof reviewSchema>;
 
@@ -31,14 +31,14 @@ export async function analyzeRepository(
   files: Array<{ path: string; content: string }>
 ): Promise<Review> {
   const prompt = [
-    'You are a senior application security and code quality reviewer.',
-    'Return only findings that are directly supported by the provided source.',
-    'Prefer precise, actionable recommendations over generic advice.',
-    'If there are no findings, return an empty findings array.',
-    '',
-    ...files.map((f) => `FILE: ${f.path}\n${f.content}`)
-  ].join('\n');
- 
+    "You are a senior application security and code quality reviewer.",
+    "Return only findings that are directly supported by the provided source.",
+    "Prefer precise, actionable recommendations over generic advice.",
+    "If there are no findings, return an empty findings array.",
+    "",
+    ...files.map((f) => `FILE: ${f.path}\n${f.content}`),
+  ].join("\n");
+
   const result = await generateText({
     model: google("gemini-3.8-flash"),
     output: Output.object({ schema: reviewSchema }),
@@ -47,24 +47,3 @@ export async function analyzeRepository(
 
   return result.output;
 }
-
-
-
-async function main() {
-  const files = [
-    {
-      path: "src/auth.ts",
-      content: `
-        export function login(user: string, password: string) {
-          if (password === 'admin') return true;
-          return false;
-        }
-      `,
-    },
-  ];
-
-  const review = await analyzeRepository(files);
-  console.log(JSON.stringify(review, null, 2));
-}
-
-main();

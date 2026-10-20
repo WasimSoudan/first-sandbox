@@ -5,7 +5,7 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "review": "tsx src/cli.ts review"
+    "review": "tsx --env-file=.env src/cli.ts review"
   },
   "keywords": [],
   "author": "",
@@ -14,9 +14,11 @@
     "@ai-sdk/google": "^4.0.101",
     "@vercel/sandbox": "^3.8.0",
     "ai": "^7.0.146",
-    "commander": "^15.0.0"
+    "commander": "^15.0.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@types/node": "^26.6.5",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   }
