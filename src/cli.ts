@@ -7,6 +7,16 @@ function isValidGitHubRepoUrl(input: string): boolean {
   return /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/?$/.test(input);
 }
 
+async function time<T>(label: string, fn: () => Promise<T>): Promise<T> {
+  const startedAt = Date.now();
+  try {
+    return await fn();
+  } finally {
+    const durationMs = Date.now() - startedAt;
+    console.log(`  ⏱  ${label}: ${durationMs}ms`);
+  }
+}
+
 const program = new Command();
 
 program
@@ -26,19 +36,16 @@ program
     }
 
     console.log(`Reviewing ${repoUrl}...`);
+    const totalStart = Date.now();
 
     try {
-      const lifecycle = await runSandboxLifecycle(repoUrl);
-      console.log(`Sandbox: ${lifecycle.sandboxName}`);
-      console.log(`Collected ${lifecycle.files.length} file(s) for analysis.`);
-      console.log(
-        `Tests (${lifecycle.testResult.packageManager}): exit code ${lifecycle.testResult.exitCode}`
+      const lifecycle = await time("sandbox lifecycle", () =>
+        runSandboxLifecycle(repoUrl)
       );
-
       const aiReview =
         lifecycle.files.length === 0
           ? { overallRisk: "low" as const, findings: [] }
-          : await analyzeRepository(lifecycle.files);
+          : await time("ai analysis", () => analyzeRepository(lifecycle.files));
 
       const testFindings = parseTestFailures(
         `${lifecycle.testResult.stdout}\n${lifecycle.testResult.stderr}`
@@ -58,11 +65,12 @@ program
           `  [${finding.severity}] ${finding.summary} (${finding.file})`
         );
       }
-
       console.log(`Test findings: ${combined.testFindings.length}`);
       for (const finding of combined.testFindings) {
         console.log(`  [${finding.severity}] ${finding.details}`);
       }
+
+      console.log(`\nTotal: ${Date.now() - totalStart}ms`);
     } catch (error) {
       console.error(
         "Review failed:",
